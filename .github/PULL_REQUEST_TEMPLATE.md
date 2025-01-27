@@ -25,9 +25,6 @@ See the "Integration Tests" subsection of the
 [Running Submitter Tests](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/mainline/DEVELOPMENT.md#running-submitter-tests)
 section of DEVELOPMENT.md for information on these tests.
 
-```
-Required: paste the contents of job_bundle_output_tests/test-job-bundle-results.txt here
-```
 *delete text ending here*
 
 ### Was this change documented?
