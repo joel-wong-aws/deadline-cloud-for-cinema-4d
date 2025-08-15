@@ -6,7 +6,9 @@
         "take": { "type": "string" },
         "output_path": { "type": "string" },
         "multi_pass_path": { "type": "string" },
-        "activate_error_checking": { "type": "string" }
+        "activate_error_checking": { "type": "string" },
+        "activate_freeze_detection": { "type": "string" },
+        "freeze_detection_time": { "type": "string" }
     },
     "required": [ "scene_file" ]
 }

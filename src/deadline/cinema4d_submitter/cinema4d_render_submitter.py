@@ -99,6 +99,12 @@ def _get_parameter_values(
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
+    parameter_values.append(
+        {"name": "ActivateFreezeDetection", "value": settings.activate_freeze_detection}
+    )
+    parameter_values.append(
+        {"name": "FreezeDetectionTime", "value": settings.freeze_detection_time}
+    )
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -214,8 +220,13 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'"
-                % take_data.name
+                "scene_file: '{{Param.Cinema4DFile}}'\n"
+                f"take: '{take_data.name}'\n"
+                "output_path: '{{Param.OutputPath}}'\n"
+                "multi_pass_path: '{{Param.MultiPassPath}}'\n"
+                "activate_error_checking: '{{Param.ActivateErrorChecking}}'\n"
+                "activate_freeze_detection: '{{Param.ActivateFreezeDetection}}'\n"
+                "freeze_detection_time: '{{Param.FreezeDetectionTime}}'"
             )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters

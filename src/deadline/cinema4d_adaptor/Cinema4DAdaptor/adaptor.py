@@ -9,6 +9,7 @@ import re
 import sys
 import threading
 import time
+from datetime import datetime, timedelta
 from functools import wraps
 from typing import Callable
 
@@ -28,7 +29,13 @@ class Cinema4DNotRunningError(Exception):
     """Error that is raised when attempting to use Cinema4D while it is not running"""
 
 
-_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path"]
+_FIRST_CINEMA4D_ACTIONS = [
+    "scene_file",
+    "take",
+    "output_path",
+    "multi_pass_path",
+    "activate_freeze_detection",
+]
 _CINEMA4D_RUN_KEYS = {
     "frame",
 }
@@ -76,6 +83,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     _activate_error_checking: int = (
         1  # 0=deactivate, 1=activate - controls whether error regex callbacks are added
     )
+    _activate_freeze_detection: int = (
+        1  # 0=deactivate, 1=activate - controls whether to automatically detect and end
+        # frozen Cinema 4D processes. A Cinema 4D process is considered frozen if it has
+        # not reported any progress within the last _freeze_detection_timeout seconds.
+    )
+    _freeze_detection_time: int = 1800  # seconds
 
     def _print_adaptor_version(self) -> None:
         """Prints the adaptor version information."""
@@ -110,7 +123,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:
-        return SemanticVersion(major=0, minor=2)
+        return SemanticVersion(major=0, minor=3)
 
     @staticmethod
     def _get_timer(timeout: int | float) -> Callable[[], bool]:
@@ -466,6 +479,8 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         self.validators.init_data.validate(self.init_data)
 
         self._activate_error_checking = int(self.init_data.get("activate_error_checking", "1"))
+        self._activate_freeze_detection = int(self.init_data.get("activate_freeze_detection", "1"))
+        self._freeze_detection_time = int(self.init_data.get("freeze_detection_time", "1800"))
 
         self.update_status(progress=0, status_message="Initializing Cinema4D")
         self._initialize_maxon_assets_db_connection()
@@ -507,8 +522,11 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
         self._action_queue.enqueue_action(Action("start_render", {"frame": run_data["frame"]}))
 
+        start_time = datetime.now()
         while self._cinema4d_is_rendering and not self._has_exception:
             time.sleep(0.1)  # busy wait so that on_cleanup is not called
+            if self._activate_freeze_detection and self._is_frozen(start_time):
+                raise Exception("Freeze detected!!")
 
         if (
             not self._cinema4d_is_running and self._cinema4d_client
@@ -520,6 +538,22 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 "Cinema4D exited early and did not render successfully, please check render logs. "
                 f"Exit code {exit_code}"
             )
+
+    def _is_frozen(self, start_time: datetime) -> bool:
+        if datetime.now() - start_time < timedelta(seconds=self._freeze_detection_time):
+            # the task has run for less time than needed for freeze detection
+            return False
+
+        # TODO: add handling if this file does not exist
+        progress_file_path = os.path.join(
+            os.environ.get("REDSHIFT_LOCALDATAPATH"), "last_progress.txt"
+        )
+        with open(progress_file_path, "r") as progress_file:
+            last_progress_update = datetime.fromisoformat(progress_file.read())
+
+        return datetime.now() - last_progress_update > timedelta(
+            seconds=self._freeze_detection_time
+        )
 
     def on_stop(self) -> None:
         """ """

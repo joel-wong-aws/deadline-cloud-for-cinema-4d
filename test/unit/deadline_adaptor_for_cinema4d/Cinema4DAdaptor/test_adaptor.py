@@ -20,6 +20,8 @@ REFERENCE_INIT_DATA_SCHEMA = {
         "output_path": {"type": "string"},
         "multi_pass_path": {"type": "string"},
         "activate_error_checking": {"type": "string"},
+        "activate_freeze_detection": {"type": "string"},
+        "freeze_detection_time": {"type": "string"},
     },
     "required": ["scene_file"],
 }
@@ -156,7 +158,7 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
     """
     # Expected version for these reference schemas
     EXPECTED_MAJOR = 0
-    EXPECTED_MINOR = 2
+    EXPECTED_MINOR = 3
 
     # Get the current version from the adaptor
     adapter = Cinema4DAdaptor(init_data)

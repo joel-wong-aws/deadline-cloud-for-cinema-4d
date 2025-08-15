@@ -55,6 +55,28 @@ parameterDefinitions:
   allowedValues:
   - '1'
   - '0'
+- name: ActivateFreezeDetection
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Activate automatic freeze detection
+    groupLabel: Cinema4D Settings
+  description: Fails if Cinema 4D does not report any progress for too long.
+  default: '1'
+  allowedValues:
+  - '1'
+  - '0'
+- name: FreezeDetectionTime
+  type: INT
+  userInterface:
+    control: SPIN_BOX
+    label: Freeze Detection Time
+    groupLabel: Cinema4D Settings
+    singleStepDelta: 1
+  description: Number of seconds to wait before failing due to lack of progress being reported. Ignored if Activate Freeze Detection is off (0).
+  default: 1800
+  minValue: 1
+  maxValue: 2592000
 steps:
 - name: Render
   parameterSpace:
@@ -79,6 +101,8 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          activate_freeze_detection: '{{Param.ActivateFreezeDetection}}'
+          freeze_detection_time: '{{Param.FreezeDetectionTime}}'
       actions:
         onEnter:
           command: cinema4d-openjd

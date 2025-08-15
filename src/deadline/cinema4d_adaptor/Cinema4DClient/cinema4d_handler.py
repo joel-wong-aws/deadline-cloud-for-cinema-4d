@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import traceback
+from datetime import datetime
 from typing import Any, Callable, Dict
 
 try:
@@ -26,32 +27,6 @@ _RENDERRESULT = {
 }
 
 
-def progress_callback(progress_percent, progress_type_int):
-    """Function passed in RenderDocument. It will be called automatically by Cinema 4D with the current render progress.
-
-    Args:
-        progress (float): The percent of the progress for the current step
-        progress_type (c4d.RENDERPROGRESSTYPE): The Main part of the current rendering step
-    """
-    progress_type_map = {
-        c4d.RENDERPROGRESSTYPE_BEFORERENDERING: "before rendering",
-        c4d.RENDERPROGRESSTYPE_DURINGRENDERING: "during rendering",
-        c4d.RENDERPROGRESSTYPE_AFTERRENDERING: "after rendering",
-        c4d.RENDERPROGRESSTYPE_GLOBALILLUMINATION: "global illumination",
-        c4d.RENDERPROGRESSTYPE_QUICK_PREVIEW: "quick preview",
-        c4d.RENDERPROGRESSTYPE_AMBIENTOCCLUSION: "ambient occlusion",
-    }
-    if progress_type_int in progress_type_map:
-        progress_type_text = progress_type_map[progress_type_int]
-    else:
-        progress_type_text = f"Unknown progress type ({progress_type_int})"
-
-    print(f"Progress update ({progress_type_text}): {progress_percent * 100.0}%")
-
-    if progress_type_int == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
-        print("ALF_PROGRESS %g" % (progress_percent * 100))
-
-
 class Cinema4DHandler:
     action_dict: Dict[str, Callable[[Dict[str, Any]], None]] = {}
     render_kwargs: Dict[str, Any]
@@ -68,10 +43,46 @@ class Cinema4DHandler:
             "start_render": self.start_render,
             "output_path": self.output_path,
             "multi_pass_path": self.multi_pass_path,
+            "activate_freeze_detection": self.activate_freeze_detection,
         }
         self.render_kwargs = {}
         self.take = "Main"
         self.map_path = map_path
+
+    def progress_callback(self, progress_percent, progress_type_int):
+        """Function passed in RenderDocument. It will be called automatically by Cinema 4D with the current render progress.
+
+        Args:
+            progress (float): The percent of the progress for the current step
+            progress_type (c4d.RENDERPROGRESSTYPE): The Main part of the current rendering step
+        """
+        progress_type_map = {
+            c4d.RENDERPROGRESSTYPE_BEFORERENDERING: "before rendering",
+            c4d.RENDERPROGRESSTYPE_DURINGRENDERING: "during rendering",
+            c4d.RENDERPROGRESSTYPE_AFTERRENDERING: "after rendering",
+            c4d.RENDERPROGRESSTYPE_GLOBALILLUMINATION: "global illumination",
+            c4d.RENDERPROGRESSTYPE_QUICK_PREVIEW: "quick preview",
+            c4d.RENDERPROGRESSTYPE_AMBIENTOCCLUSION: "ambient occlusion",
+        }
+        if progress_type_int in progress_type_map:
+            progress_type_text = progress_type_map[progress_type_int]
+        else:
+            progress_type_text = f"Unknown progress type ({progress_type_int})"
+
+        print(f"Progress update ({progress_type_text}): {progress_percent * 100.0}%")
+
+        if (
+            "activate_freeze_detection" in self.render_kwargs
+            and self.render_kwargs["activate_freeze_detection"]
+        ):
+            progress_file_path = os.path.join(
+                os.environ.get("REDSHIFT_LOCALDATAPATH"), "last_progress.txt"
+            )
+            with open(progress_file_path, "w") as progress_file:
+                progress_file.write(datetime.now().isoformat())
+
+        if progress_type_int == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
+            print("ALF_PROGRESS %g" % (progress_percent * 100))
 
     def _remap_assets(self) -> None:
         """
@@ -245,7 +256,7 @@ class Cinema4DHandler:
             rd,
             bm,
             c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS,
-            prog=progress_callback,
+            prog=self.progress_callback,
         )
         result_description = _RENDERRESULT.get(result)
         if result_description is None:
@@ -309,6 +320,17 @@ class Cinema4DHandler:
             data (dict):
         """
         self.render_kwargs["frame"] = int(data["frame"])
+
+    def activate_freeze_detection(self, data: dict) -> None:
+        """
+        Turns on freeze detection
+
+        Args:
+            data (dict):
+        """
+        self.render_kwargs["activate_freeze_detection"] = bool(
+            int(data["activate_freeze_detection"])
+        )
 
     def set_scene_file(self, data: dict) -> None:
         """

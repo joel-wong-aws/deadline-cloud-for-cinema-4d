@@ -11,7 +11,7 @@ from pathlib import Path
 from deadline.client.ui.dataclasses.timeouts import TimeoutEntry, TimeoutTableEntries
 
 from .takes import TakeSelection  # type: ignore
-from .error_checking import ErrorChecking
+from .constants import ErrorChecking, FreezeDetection
 from datetime import timedelta
 
 RENDER_SUBMITTER_SETTINGS_FILE_EXT = ".deadline_render_settings.json"
@@ -74,6 +74,10 @@ class RenderSubmitterUISettings:
     activate_error_checking: str = field(
         default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}
     )
+    activate_freeze_detection: str = field(
+        default=FreezeDetection.ACTIVATE.value, metadata={"sticky": True}
+    )
+    freeze_detection_time: int = field(default=1800, metadata={"sticky": True})
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )
