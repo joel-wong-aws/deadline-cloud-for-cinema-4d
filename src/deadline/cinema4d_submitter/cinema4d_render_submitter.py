@@ -810,12 +810,14 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
     # Create SubmitterInfo with all available metadata
     release_date = _get_release_date()
     additional_info: Optional[dict[str, Any]] = (
-        {"release_date": release_date} if release_date else None
+        {"documentation_link": "https://aws-deadline.github.io/cinema-4d"}
     )
+    if release_date:
+        additional_info["release_date"] = release_date
 
     submitter_info = SubmitterInfo(
-        submitter_name="Cinema4D",
-        submitter_package_name="deadline-cloud-for-cinema4d",
+        submitter_name="Cinema 4D",
+        submitter_package_name="deadline-cloud-for-cinema-4d",
         submitter_package_version=".".join(str(v) for v in adaptor_version_tuple),
         host_application_name="Cinema 4D",
         host_application_version=str(c4d.GetC4DVersion()),
